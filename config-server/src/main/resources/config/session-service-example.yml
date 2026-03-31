@@ -1,0 +1,31 @@
+server:
+  port: 9005
+
+spring:
+  application:
+    name: session-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/skillsync_session_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: USERNAME
+    password: PASSWORD
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: USERNAME
+    password: PASSWORD
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+security:
+  jwt:
+    secret: "skillsyncskillsyncskillsyncskillsyncskillsync12345"
+

@@ -35,3 +35,13 @@ logs/
 
 # Sonar
 /.scannerwork/
+
+**/application.yml
+config-server/src/main/resources/config/auth-service.yml
+config-server/src/main/resources/config/group-service.yml
+config-server/src/main/resources/config/mentor-service.yml
+config-server/src/main/resources/config/notification-service.yml
+config-server/src/main/resources/config/review-service.yml
+config-server/src/main/resources/config/session-service.yml
+config-server/src/main/resources/config/skill-service.yml
+config-server/src/main/resources/config/user-service.yml
