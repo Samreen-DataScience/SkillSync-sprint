@@ -1,0 +1,5 @@
+# Optional dev profile for discovery-server
+spring:
+  config:
+    activate:
+      on-profile: dev

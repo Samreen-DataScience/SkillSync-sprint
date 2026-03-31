@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.skillsync.authservice.service.serviceImpl.AuthServiceImplTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.998 s -- in com.skillsync.authservice.service.serviceImpl.AuthServiceImplTest

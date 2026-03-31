@@ -1,0 +1,16 @@
+# Shared overrides for production-style profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    root: INFO
+    com.skillsync: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

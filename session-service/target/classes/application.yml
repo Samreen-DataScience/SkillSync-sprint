@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: session-service
+  config:
+    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://localhost:8888}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+

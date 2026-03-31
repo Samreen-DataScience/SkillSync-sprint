@@ -1,0 +1,5 @@
+# Optional dev profile for api-gateway
+spring:
+  config:
+    activate:
+      on-profile: dev

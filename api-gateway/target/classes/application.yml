@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://localhost:8888}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,mappings
+  info:
+    env:
+      enabled: true
+

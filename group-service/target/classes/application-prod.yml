@@ -1,0 +1,5 @@
+# Optional prod profile for group-service
+spring:
+  config:
+    activate:
+      on-profile: prod

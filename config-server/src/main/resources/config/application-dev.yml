@@ -1,0 +1,16 @@
+# Shared overrides for local development profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    root: INFO
+    com.skillsync: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,mappings,env

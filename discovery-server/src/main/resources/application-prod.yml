@@ -1,0 +1,5 @@
+# Optional prod profile for discovery-server
+spring:
+  config:
+    activate:
+      on-profile: prod

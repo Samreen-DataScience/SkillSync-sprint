@@ -1,0 +1,5 @@
+# Optional dev profile for session-service
+spring:
+  config:
+    activate:
+      on-profile: dev

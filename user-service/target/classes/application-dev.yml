@@ -1,0 +1,5 @@
+# Optional dev profile for user-service
+spring:
+  config:
+    activate:
+      on-profile: dev

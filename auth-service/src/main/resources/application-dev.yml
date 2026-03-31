@@ -1,0 +1,5 @@
+# Optional dev profile for auth-service
+spring:
+  config:
+    activate:
+      on-profile: dev

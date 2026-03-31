@@ -1,0 +1,5 @@
+# Optional prod profile for session-service
+spring:
+  config:
+    activate:
+      on-profile: prod

@@ -1,0 +1,5 @@
+# Optional dev profile for notification-service
+spring:
+  config:
+    activate:
+      on-profile: dev
