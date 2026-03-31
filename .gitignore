@@ -1,0 +1,37 @@
+# Maven / Java
+/target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IntelliJ
+/.idea/
+*.iml
+*.iws
+*.ipr
+/out/
+
+# Eclipse / STS
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# OS / misc
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Env / secrets
+.env
+*.env
+
+# Sonar
+/.scannerwork/
