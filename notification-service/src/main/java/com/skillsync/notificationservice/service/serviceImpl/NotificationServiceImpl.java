@@ -29,6 +29,21 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
+    public PageResponse<NotificationResponse> getAll(int page, int size, String sortBy, String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Page<Notification> result = notificationRepository.findAll(PageRequest.of(page, size, sort));
+        return PageResponse.<NotificationResponse>builder()
+                .content(result.getContent().stream().map(this::toResponse).toList())
+                .page(result.getNumber())
+                .size(result.getSize())
+                .totalElements(result.getTotalElements())
+                .totalPages(result.getTotalPages())
+                .last(result.isLast())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PageResponse<NotificationResponse> getByUserId(Long userId, int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Page<Notification> result = notificationRepository.findByUserId(userId, PageRequest.of(page, size, sort));
@@ -56,6 +71,15 @@ public class NotificationServiceImpl implements NotificationService {
         return NotificationCountResponse.builder()
                 .userId(userId)
                 .unreadCount(notificationRepository.countByUserIdAndStatus(userId, NotificationStatus.SENT))
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public NotificationCountResponse getUnreadCountForAdmin() {
+        return NotificationCountResponse.builder()
+                .userId(null)
+                .unreadCount(notificationRepository.countByStatus(NotificationStatus.SENT))
                 .build();
     }
 

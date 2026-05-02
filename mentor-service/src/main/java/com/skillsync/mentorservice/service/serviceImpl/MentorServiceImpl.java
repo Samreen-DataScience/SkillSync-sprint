@@ -42,8 +42,12 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     public MentorResponse apply(MentorApplyRequest request) {
-        if (mentorProfileRepository.existsByUserId(request.getUserId())) {
-            throw new DuplicateResourceException("Mentor profile already exists for this user");
+        MentorProfile existing = request.getEmail() == null || request.getEmail().isBlank()
+                ? null
+                : mentorProfileRepository.findByEmailIgnoreCase(request.getEmail()).orElse(null);
+        if (existing != null) {
+            applyRequest(existing, request);
+            return toResponse(mentorProfileRepository.save(existing));
         }
 
         MentorProfile profile = modelMapper.map(request, MentorProfile.class);
@@ -60,22 +64,65 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<MentorResponse> getAll(String skillId, BigDecimal minRating, Integer minExperience, BigDecimal maxPrice, int page, int size, String sortBy, String sortDir) {
+    public MentorResponse getByUserId(Long userId, String email) {
+        if (email != null && !email.isBlank()) {
+            return mentorProfileRepository.findByEmailIgnoreCase(email)
+                    .map(this::toResponse)
+                    .orElseThrow(() -> new ResourceNotFoundException("Mentor profile not found for this user"));
+        }
+
+        return mentorProfileRepository.findByUserId(userId)
+                .map(this::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Mentor profile not found for this user"));
+    }
+
+    @Override
+    public MentorResponse update(Long id, MentorApplyRequest request) {
+        MentorProfile mentor = getMentorOrThrow(id);
+        if (!mentor.getUserId().equals(request.getUserId()) && !sameEmail(mentor.getEmail(), request.getEmail())) {
+            throw new BusinessException("You can update only your own mentor profile");
+        }
+
+        applyRequest(mentor, request);
+
+        return toResponse(mentorProfileRepository.save(mentor));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<MentorResponse> getAll(String skillId, String status, BigDecimal minRating, Integer minExperience, BigDecimal maxPrice, int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Specification<MentorProfile> spec = (root, query, cb) -> cb.equal(root.get("status"), MentorStatus.APPROVED);
+        String requestedStatus = status == null ? "" : status.trim();
+        Specification<MentorProfile> spec;
+        if (requestedStatus.equalsIgnoreCase("ALL")) {
+            spec = Specification.where(null);
+        } else {
+            MentorStatus mentorStatus = requestedStatus.isBlank()
+                    ? MentorStatus.APPROVED
+                    : MentorStatus.valueOf(requestedStatus.toUpperCase());
+            spec = (root, query, cb) -> cb.equal(root.get("status"), mentorStatus);
+        }
 
         if (skillId != null && !skillId.isBlank()) {
             Long sid = Long.valueOf(skillId);
-            spec = spec.and((root, query, cb) -> cb.isMember(sid, root.get("skillIds")));
+            spec = spec == null
+                    ? (root, query, cb) -> cb.isMember(sid, root.get("skillIds"))
+                    : spec.and((root, query, cb) -> cb.isMember(sid, root.get("skillIds")));
         }
         if (minRating != null) {
-            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("averageRating"), minRating));
+            spec = spec == null
+                    ? (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("averageRating"), minRating)
+                    : spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("averageRating"), minRating));
         }
         if (minExperience != null) {
-            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("experienceYears"), minExperience));
+            spec = spec == null
+                    ? (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("experienceYears"), minExperience)
+                    : spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("experienceYears"), minExperience));
         }
         if (maxPrice != null) {
-            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("hourlyRate"), maxPrice));
+            spec = spec == null
+                    ? (root, query, cb) -> cb.lessThanOrEqualTo(root.get("hourlyRate"), maxPrice)
+                    : spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("hourlyRate"), maxPrice));
         }
 
         Page<MentorProfile> result = mentorProfileRepository.findAll(spec, PageRequest.of(page, size, sort));
@@ -167,6 +214,14 @@ public class MentorServiceImpl implements MentorService {
     }
 
     @Override
+    public void delete(Long id) {
+        MentorProfile mentor = getMentorOrThrow(id);
+        mentor.getAvailabilitySlots().clear();
+        mentor.getSkillIds().clear();
+        mentorProfileRepository.delete(mentor);
+    }
+
+    @Override
     public MentorResponse updateAverageRating(Long id, BigDecimal averageRating) {
         MentorProfile mentor = getMentorOrThrow(id);
         mentor.setAverageRating(averageRating == null ? BigDecimal.ZERO : averageRating);
@@ -183,6 +238,21 @@ public class MentorServiceImpl implements MentorService {
             rabbitTemplate.convertAndSend(RabbitConfig.EXCHANGE, routingKey, event);
         } catch (Exception ignored) {
         }
+    }
+
+    private void applyRequest(MentorProfile mentor, MentorApplyRequest request) {
+        mentor.setUserId(request.getUserId());
+        mentor.setDisplayName(request.getDisplayName());
+        mentor.setEmail(request.getEmail());
+        mentor.setBio(request.getBio());
+        mentor.setExperienceYears(request.getExperienceYears());
+        mentor.setHourlyRate(request.getHourlyRate());
+        mentor.getSkillIds().clear();
+        mentor.getSkillIds().addAll(request.getSkillIds());
+    }
+
+    private boolean sameEmail(String left, String right) {
+        return left != null && right != null && left.equalsIgnoreCase(right);
     }
 
     private MentorResponse toResponse(MentorProfile profile) {

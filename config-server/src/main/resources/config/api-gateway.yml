@@ -5,10 +5,124 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+              - "http://127.0.0.1:5173"
+              - "http://localhost:8080"
+              - "http://127.0.0.1:8080"
+              - "http://localhost:9001"
+              - "http://127.0.0.1:9001"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+        add-to-simple-url-handler-mapping: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_FIRST
       discovery:
         locator:
           enabled: true
       routes:
+        - id: auth-service-docs
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/v3/api-docs
+          filters:
+            - RewritePath=/auth/v3/api-docs,/v3/api-docs
+        - id: user-service-docs
+          uri: lb://user-service
+          predicates:
+            - Path=/users/v3/api-docs
+          filters:
+            - RewritePath=/users/v3/api-docs,/v3/api-docs
+        - id: mentor-service-docs
+          uri: lb://mentor-service
+          predicates:
+            - Path=/mentors/v3/api-docs
+          filters:
+            - RewritePath=/mentors/v3/api-docs,/v3/api-docs
+        - id: skill-service-docs
+          uri: lb://skill-service
+          predicates:
+            - Path=/skills/v3/api-docs
+          filters:
+            - RewritePath=/skills/v3/api-docs,/v3/api-docs
+        - id: session-service-docs
+          uri: lb://session-service
+          predicates:
+            - Path=/sessions/v3/api-docs
+          filters:
+            - RewritePath=/sessions/v3/api-docs,/v3/api-docs
+        - id: group-service-docs
+          uri: lb://group-service
+          predicates:
+            - Path=/groups/v3/api-docs
+          filters:
+            - RewritePath=/groups/v3/api-docs,/v3/api-docs
+        - id: review-service-docs
+          uri: lb://review-service
+          predicates:
+            - Path=/reviews/v3/api-docs
+          filters:
+            - RewritePath=/reviews/v3/api-docs,/v3/api-docs
+        - id: notification-service-docs
+          uri: lb://notification-service
+          predicates:
+            - Path=/notifications/v3/api-docs
+          filters:
+            - RewritePath=/notifications/v3/api-docs,/v3/api-docs
+
+        - id: auth-service-prometheus
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/actuator/prometheus
+          filters:
+            - RewritePath=/auth/actuator/prometheus,/actuator/prometheus
+        - id: user-service-prometheus
+          uri: lb://user-service
+          predicates:
+            - Path=/users/actuator/prometheus
+          filters:
+            - RewritePath=/users/actuator/prometheus,/actuator/prometheus
+        - id: mentor-service-prometheus
+          uri: lb://mentor-service
+          predicates:
+            - Path=/mentors/actuator/prometheus
+          filters:
+            - RewritePath=/mentors/actuator/prometheus,/actuator/prometheus
+        - id: skill-service-prometheus
+          uri: lb://skill-service
+          predicates:
+            - Path=/skills/actuator/prometheus
+          filters:
+            - RewritePath=/skills/actuator/prometheus,/actuator/prometheus
+        - id: session-service-prometheus
+          uri: lb://session-service
+          predicates:
+            - Path=/sessions/actuator/prometheus
+          filters:
+            - RewritePath=/sessions/actuator/prometheus,/actuator/prometheus
+        - id: group-service-prometheus
+          uri: lb://group-service
+          predicates:
+            - Path=/groups/actuator/prometheus
+          filters:
+            - RewritePath=/groups/actuator/prometheus,/actuator/prometheus
+        - id: review-service-prometheus
+          uri: lb://review-service
+          predicates:
+            - Path=/reviews/actuator/prometheus
+          filters:
+            - RewritePath=/reviews/actuator/prometheus,/actuator/prometheus
+        - id: notification-service-prometheus
+          uri: lb://notification-service
+          predicates:
+            - Path=/notifications/actuator/prometheus
+          filters:
+            - RewritePath=/notifications/actuator/prometheus,/actuator/prometheus
+
         - id: auth-service
           uri: lb://auth-service
           predicates:
@@ -42,6 +156,30 @@ spring:
           predicates:
             - Path=/notifications/**
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    disable-swagger-default-url: true
+    urls:
+      - name: auth-service
+        url: /auth/v3/api-docs
+      - name: user-service
+        url: /users/v3/api-docs
+      - name: mentor-service
+        url: /mentors/v3/api-docs
+      - name: skill-service
+        url: /skills/v3/api-docs
+      - name: session-service
+        url: /sessions/v3/api-docs
+      - name: group-service
+        url: /groups/v3/api-docs
+      - name: review-service
+        url: /reviews/v3/api-docs
+      - name: notification-service
+        url: /notifications/v3/api-docs
+
 security:
   jwt:
     secret: "skillsyncskillsyncskillsyncskillsyncskillsync12345"
@@ -49,7 +187,7 @@ security:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-server:8761/eureka/}
 
 management:
   info:
@@ -61,7 +199,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,mappings
+        include: health,info,gateway,mappings,prometheus
 
 info:
   app:

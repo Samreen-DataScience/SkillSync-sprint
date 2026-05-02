@@ -3,12 +3,16 @@ spring:
     name: api-gateway
   config:
     import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://localhost:8888}
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_FIRST
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,mappings
+        include: health,info,gateway,mappings,prometheus
   info:
     env:
       enabled: true

@@ -53,6 +53,22 @@ class NotificationServiceImplTest {
     }
 
     @Test
+    void getAllShouldReturnPagedNotificationsForAdmin() {
+        Notification notification = Notification.builder().id(3L).userId(1L).message("Session completed").status(NotificationStatus.SENT).build();
+        NotificationResponse mapped = new NotificationResponse();
+        mapped.setId(3L);
+
+        when(notificationRepository.findAll(PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("id").descending())))
+                .thenReturn(new PageImpl<>(List.of(notification), PageRequest.of(0, 10), 1));
+        when(modelMapper.map(notification, NotificationResponse.class)).thenReturn(mapped);
+
+        PageResponse<NotificationResponse> response = notificationService.getAll(0, 10, "id", "desc");
+
+        assertEquals(1, response.getContent().size());
+        assertEquals("SENT", response.getContent().get(0).getStatus());
+    }
+
+    @Test
     void markReadShouldUpdateNotificationStatus() {
         Notification notification = Notification.builder().id(2L).userId(4L).message("Session accepted").status(NotificationStatus.SENT).build();
         Notification saved = Notification.builder().id(2L).userId(4L).message("Session accepted").status(NotificationStatus.READ).build();

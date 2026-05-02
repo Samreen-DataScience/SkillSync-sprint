@@ -1,6 +1,7 @@
 package com.skillsync.sessionservice.controller;
 
 import com.skillsync.sessionservice.dto.PageResponse;
+import com.skillsync.sessionservice.dto.MeetingLinkRequest;
 import com.skillsync.sessionservice.dto.SessionRequest;
 import com.skillsync.sessionservice.dto.SessionResponse;
 import com.skillsync.sessionservice.dto.SessionSummaryResponse;
@@ -51,6 +52,24 @@ public class SessionController {
         return ResponseEntity.ok(sessionService.complete(id));
     }
 
+    @PutMapping("/{id}/meeting-link")
+    @PreAuthorize("hasAuthority('ROLE_MENTOR')")
+    public ResponseEntity<SessionResponse> updateMeetingLink(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody MeetingLinkRequest request) {
+        return ResponseEntity.ok(sessionService.updateMeetingLink(id, request.getMeetingLink()));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<PageResponse<SessionResponse>> getAll(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "50") int size,
+            @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
+            @RequestParam(name = "sortDir", defaultValue = "desc") String sortDir) {
+        return ResponseEntity.ok(sessionService.getAll(page, size, sortBy, sortDir));
+    }
+
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasAnyAuthority('ROLE_LEARNER','ROLE_MENTOR','ROLE_ADMIN')")
     public ResponseEntity<PageResponse<SessionResponse>> getByUser(
@@ -60,6 +79,17 @@ public class SessionController {
             @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
             @RequestParam(name = "sortDir", defaultValue = "asc") String sortDir) {
         return ResponseEntity.ok(sessionService.getByUserId(userId, page, size, sortBy, sortDir));
+    }
+
+    @GetMapping("/mentor/{mentorId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR','ROLE_ADMIN')")
+    public ResponseEntity<PageResponse<SessionResponse>> getByMentor(
+            @PathVariable("mentorId") Long mentorId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
+            @RequestParam(name = "sortDir", defaultValue = "asc") String sortDir) {
+        return ResponseEntity.ok(sessionService.getByMentorId(mentorId, page, size, sortBy, sortDir));
     }
 
     @GetMapping("/user/{userId}/summary")

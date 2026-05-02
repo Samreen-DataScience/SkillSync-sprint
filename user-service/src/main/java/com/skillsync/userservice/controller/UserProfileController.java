@@ -38,6 +38,12 @@ public class UserProfileController {
         return ResponseEntity.ok(userProfileService.getById(id));
     }
 
+    @GetMapping("/auth/{authUserId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_LEARNER','ROLE_MENTOR','ROLE_ADMIN')")
+    public ResponseEntity<UserProfileResponse> getByAuthUserId(@PathVariable("authUserId") Long authUserId) {
+        return ResponseEntity.ok(userProfileService.getByAuthUserId(authUserId));
+    }
+
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<PageResponse<UserProfileResponse>> getAll(
@@ -46,6 +52,13 @@ public class UserProfileController {
             @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
             @RequestParam(name = "sortDir", defaultValue = "asc") String sortDir) {
         return ResponseEntity.ok(userProfileService.getAll(page, size, sortBy, sortDir));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
+        userProfileService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }
 

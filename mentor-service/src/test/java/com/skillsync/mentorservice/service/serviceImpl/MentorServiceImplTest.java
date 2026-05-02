@@ -51,6 +51,7 @@ class MentorServiceImplTest {
     void applyShouldCreatePendingMentorProfile() {
         MentorApplyRequest request = new MentorApplyRequest();
         request.setUserId(3L);
+        request.setEmail("mentor@example.com");
         request.setBio("Java mentor");
         request.setExperienceYears(5);
         request.setHourlyRate(BigDecimal.valueOf(500));
@@ -64,7 +65,7 @@ class MentorServiceImplTest {
         MentorResponse mapped = new MentorResponse();
         mapped.setId(10L);
 
-        when(mentorProfileRepository.existsByUserId(3L)).thenReturn(false);
+        when(mentorProfileRepository.findByEmailIgnoreCase("mentor@example.com")).thenReturn(Optional.empty());
         when(modelMapper.map(request, MentorProfile.class)).thenReturn(unsaved);
         when(mentorProfileRepository.save(unsaved)).thenReturn(saved);
         when(modelMapper.map(saved, MentorResponse.class)).thenReturn(mapped);
@@ -100,7 +101,7 @@ class MentorServiceImplTest {
                 .thenReturn(new PageImpl<>(List.of(profile), PageRequest.of(0, 10), 1));
         when(modelMapper.map(profile, MentorResponse.class)).thenReturn(mapped);
 
-        PageResponse<MentorResponse> response = mentorService.getAll("1", BigDecimal.valueOf(4.0), 3, BigDecimal.valueOf(1000), 0, 10, "id", "asc");
+        PageResponse<MentorResponse> response = mentorService.getAll("1", null, BigDecimal.valueOf(4.0), 3, BigDecimal.valueOf(1000), 0, 10, "id", "asc");
 
         assertEquals(1, response.getContent().size());
         assertEquals("APPROVED", response.getContent().get(0).getStatus());

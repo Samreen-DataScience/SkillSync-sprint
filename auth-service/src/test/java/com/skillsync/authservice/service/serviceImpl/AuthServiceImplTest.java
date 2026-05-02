@@ -112,6 +112,37 @@ class AuthServiceImplTest {
     }
 
     @Test
+    void registerShouldAllowMentorButIgnoreAdminRole() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Public User");
+        request.setEmail("public@test.com");
+        request.setPassword("Public@123");
+        request.setRoles(Set.of("ROLE_ADMIN", "ROLE_MENTOR"));
+
+        Role mentorRole = Role.builder().id(2L).name(RoleName.ROLE_MENTOR).build();
+        UserDetails userDetails = buildUserDetails("public@test.com", "ROLE_MENTOR");
+
+        when(userRepository.existsByEmail("public@test.com")).thenReturn(false);
+        when(passwordEncoder.encode("Public@123")).thenReturn("encoded-pass");
+        when(roleRepository.findByName(RoleName.ROLE_MENTOR)).thenReturn(Optional.of(mentorRole));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(11L);
+            return user;
+        });
+        when(userDetailsService.loadUserByUsername("public@test.com")).thenReturn(userDetails);
+        when(jwtService.generateToken(eq(userDetails), eq(11L), anyList())).thenReturn("jwt-token");
+        when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AuthResponse response = authService.register(request);
+
+        assertEquals(Set.of("ROLE_MENTOR"), response.getRoles());
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        assertEquals(Set.of(RoleName.ROLE_MENTOR), userCaptor.getValue().getRoles().stream().map(Role::getName).collect(java.util.stream.Collectors.toSet()));
+    }
+
+    @Test
     void registerShouldThrowWhenEmailAlreadyExists() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("existing@test.com");

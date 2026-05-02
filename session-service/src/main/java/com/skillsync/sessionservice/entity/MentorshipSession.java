@@ -37,6 +37,8 @@ public class MentorshipSession {
     @Builder.Default
     private SessionStatus status = SessionStatus.REQUESTED;
 
+    private String meetingLink;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

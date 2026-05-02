@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 public interface MentorshipSessionRepository extends JpaRepository<MentorshipSession, Long> {
     Page<MentorshipSession> findByLearnerIdOrMentorId(Long learnerId, Long mentorId, Pageable pageable);
 
+    Page<MentorshipSession> findByMentorId(Long mentorId, Pageable pageable);
+
     long countByLearnerIdOrMentorId(Long learnerId, Long mentorId);
 
     @Query("select count(s) from MentorshipSession s where (s.learnerId = :userId or s.mentorId = :userId) and s.status = :status")

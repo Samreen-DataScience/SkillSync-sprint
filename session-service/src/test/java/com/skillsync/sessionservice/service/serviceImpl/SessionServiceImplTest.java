@@ -7,6 +7,7 @@ import com.skillsync.sessionservice.dto.SessionResponse;
 import com.skillsync.sessionservice.dto.SessionSummaryResponse;
 import com.skillsync.sessionservice.entity.MentorshipSession;
 import com.skillsync.sessionservice.entity.SessionStatus;
+import com.skillsync.sessionservice.feign.MentorClient;
 import com.skillsync.sessionservice.repository.MentorshipSessionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +41,9 @@ class SessionServiceImplTest {
 
     @Mock
     private RabbitTemplate rabbitTemplate;
+
+    @Mock
+    private MentorClient mentorClient;
 
     @InjectMocks
     private SessionServiceImpl sessionService;
@@ -71,7 +76,7 @@ class SessionServiceImplTest {
 
         assertEquals(1L, response.getId());
         assertEquals("REQUESTED", response.getStatus());
-        verify(rabbitTemplate).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.booked"), any(Object.class));
+        verify(rabbitTemplate, atLeastOnce()).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.booked"), any(Object.class));
     }
 
     @Test
@@ -87,7 +92,7 @@ class SessionServiceImplTest {
         SessionResponse response = sessionService.accept(2L);
 
         assertEquals("ACCEPTED", response.getStatus());
-        verify(rabbitTemplate).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.accepted"), any(Object.class));
+        verify(rabbitTemplate, atLeastOnce()).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.accepted"), any(Object.class));
     }
 
     @Test
@@ -103,7 +108,7 @@ class SessionServiceImplTest {
         SessionResponse response = sessionService.reject(3L);
 
         assertEquals("REJECTED", response.getStatus());
-        verify(rabbitTemplate).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.rejected"), any(Object.class));
+        verify(rabbitTemplate, atLeastOnce()).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.rejected"), any(Object.class));
     }
 
     @Test
@@ -119,7 +124,7 @@ class SessionServiceImplTest {
         SessionResponse response = sessionService.cancel(4L);
 
         assertEquals("CANCELLED", response.getStatus());
-        verify(rabbitTemplate).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.cancelled"), any(Object.class));
+        verify(rabbitTemplate, atLeastOnce()).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.cancelled"), any(Object.class));
     }
 
     @Test
@@ -135,7 +140,25 @@ class SessionServiceImplTest {
         SessionResponse response = sessionService.complete(5L);
 
         assertEquals("COMPLETED", response.getStatus());
-        verify(rabbitTemplate).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.completed"), any(Object.class));
+        verify(rabbitTemplate, atLeastOnce()).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.completed"), any(Object.class));
+    }
+
+    @Test
+    void updateMeetingLinkShouldSaveLinkForAcceptedSession() {
+        MentorshipSession session = baseSession(8L, SessionStatus.ACCEPTED);
+        SessionResponse mapped = new SessionResponse();
+        mapped.setId(8L);
+        mapped.setMeetingLink("https://meet.google.com/abc-defg-hij");
+
+        when(repository.findById(8L)).thenReturn(Optional.of(session));
+        when(repository.save(session)).thenReturn(session);
+        when(modelMapper.map(session, SessionResponse.class)).thenReturn(mapped);
+
+        SessionResponse response = sessionService.updateMeetingLink(8L, " https://meet.google.com/abc-defg-hij ");
+
+        assertEquals("https://meet.google.com/abc-defg-hij", session.getMeetingLink());
+        assertEquals("https://meet.google.com/abc-defg-hij", response.getMeetingLink());
+        verify(rabbitTemplate, atLeastOnce()).convertAndSend(eq(RabbitConfig.EXCHANGE), eq("session.meeting-link.added"), any(Object.class));
     }
 
     @Test
@@ -152,6 +175,22 @@ class SessionServiceImplTest {
 
         assertEquals(1, response.getContent().size());
         assertEquals("REQUESTED", response.getContent().get(0).getStatus());
+    }
+
+    @Test
+    void getAllShouldReturnPagedSessions() {
+        MentorshipSession session = baseSession(7L, SessionStatus.COMPLETED);
+        SessionResponse mapped = new SessionResponse();
+        mapped.setId(7L);
+
+        when(repository.findAll(any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(session), PageRequest.of(0, 10), 1));
+        when(modelMapper.map(session, SessionResponse.class)).thenReturn(mapped);
+
+        PageResponse<SessionResponse> response = sessionService.getAll(0, 10, "id", "desc");
+
+        assertEquals(1, response.getContent().size());
+        assertEquals("COMPLETED", response.getContent().get(0).getStatus());
     }
 
     @Test

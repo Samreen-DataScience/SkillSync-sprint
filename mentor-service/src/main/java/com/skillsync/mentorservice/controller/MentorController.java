@@ -30,6 +30,7 @@ public class MentorController {
     @PreAuthorize("hasAnyAuthority('ROLE_LEARNER','ROLE_MENTOR','ROLE_ADMIN')")
     public ResponseEntity<PageResponse<MentorResponse>> getAll(
             @RequestParam(name = "skillId", required = false) String skillId,
+            @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "rating", required = false) BigDecimal rating,
             @RequestParam(name = "experience", required = false) Integer experience,
             @RequestParam(name = "price", required = false) BigDecimal price,
@@ -37,7 +38,7 @@ public class MentorController {
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
             @RequestParam(name = "sortDir", defaultValue = "asc") String sortDir) {
-        return ResponseEntity.ok(mentorService.getAll(skillId, rating, experience, price, page, size, sortBy, sortDir));
+        return ResponseEntity.ok(mentorService.getAll(skillId, status, rating, experience, price, page, size, sortBy, sortDir));
     }
 
     @GetMapping("/summary")
@@ -51,6 +52,20 @@ public class MentorController {
     @PreAuthorize("hasAnyAuthority('ROLE_LEARNER','ROLE_MENTOR','ROLE_ADMIN')")
     public ResponseEntity<MentorResponse> getById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(mentorService.getById(id));
+    }
+
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_MENTOR','ROLE_ADMIN')")
+    public ResponseEntity<MentorResponse> getByUserId(
+            @PathVariable("userId") Long userId,
+            @RequestParam(name = "email", required = false) String email) {
+        return ResponseEntity.ok(mentorService.getByUserId(userId, email));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_MENTOR')")
+    public ResponseEntity<MentorResponse> update(@PathVariable("id") Long id, @Valid @RequestBody MentorApplyRequest request) {
+        return ResponseEntity.ok(mentorService.update(id, request));
     }
 
     @PutMapping("/{id}/availability")
@@ -70,6 +85,13 @@ public class MentorController {
     public ResponseEntity<MentorResponse> reject(@PathVariable("id") Long id, @RequestBody(required = false) MentorStatusUpdateRequest request) {
         String reason = request == null ? null : request.getReason();
         return ResponseEntity.ok(mentorService.reject(id, reason));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
+        mentorService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/internal/{id}/rating")

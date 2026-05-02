@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "mentor_profiles", uniqueConstraints = @UniqueConstraint(columnNames = "userId"))
+@Table(name = "mentor_profiles")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,8 +22,14 @@ public class MentorProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private Long userId;
+
+    @Column(length = 100)
+    private String displayName;
+
+    @Column(length = 150)
+    private String email;
 
     @Column(length = 2000)
     private String bio;

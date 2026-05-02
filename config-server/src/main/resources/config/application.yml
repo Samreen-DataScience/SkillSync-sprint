@@ -1,9 +1,16 @@
 # Shared defaults for all services
 management:
+  endpoint:
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
   endpoints:
     web:
       exposure:
-        include: health,info,mappings
+        include: health,info,mappings,prometheus
   tracing:
     sampling:
       probability: 1.0
@@ -13,8 +20,8 @@ management:
 
 eureka:
   instance:
-    hostname: localhost
-    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:${spring.application.name}}
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
 
 server:
   error:

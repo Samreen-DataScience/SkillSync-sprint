@@ -11,6 +11,8 @@ import java.util.Set;
 public class MentorResponse {
     private Long id;
     private Long userId;
+    private String displayName;
+    private String email;
     private String bio;
     private Integer experienceYears;
     private BigDecimal hourlyRate;

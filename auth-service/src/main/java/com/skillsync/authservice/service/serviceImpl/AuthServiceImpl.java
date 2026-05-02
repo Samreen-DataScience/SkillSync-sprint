@@ -1,9 +1,6 @@
 package com.skillsync.authservice.service.serviceImpl;
 
-import com.skillsync.authservice.dto.AuthResponse;
-import com.skillsync.authservice.dto.LoginRequest;
-import com.skillsync.authservice.dto.RefreshTokenRequest;
-import com.skillsync.authservice.dto.RegisterRequest;
+import com.skillsync.authservice.dto.*;
 import com.skillsync.authservice.entity.RefreshToken;
 import com.skillsync.authservice.entity.RoleName;
 import com.skillsync.authservice.entity.User;
@@ -47,7 +44,14 @@ public class AuthServiceImpl implements AuthService {
     @Value("${security.jwt.refresh-expiration-ms}")
     private long refreshExpiry;
 
-    public AuthServiceImpl(UserRepository userRepository, RoleRepository roleRepository, RefreshTokenRepository refreshTokenRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, UserDetailsService userDetailsService, JwtService jwtService) {
+    public AuthServiceImpl(
+            UserRepository userRepository,
+            RoleRepository roleRepository,
+            RefreshTokenRepository refreshTokenRepository,
+            PasswordEncoder passwordEncoder,
+            AuthenticationManager authenticationManager,
+            UserDetailsService userDetailsService,
+            JwtService jwtService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -63,28 +67,16 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateResourceException("Email already registered");
         }
 
-        Set<RoleName> roleNames = (request.getRoles() == null || request.getRoles().isEmpty())
-                ? Set.of(RoleName.ROLE_LEARNER)
-                : request.getRoles().stream().map(RoleName::valueOf).collect(Collectors.toSet());
-
-        User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .enabled(true)
-                .build();
-
-        user.setRoles(roleNames.stream()
-                .map(role -> roleRepository.findByName(role).orElseThrow(() -> new ResourceNotFoundException("Role not found")))
-                .collect(Collectors.toSet()));
-
+        User user = buildUserFromRegisterRequest(request);
         return buildResponse(userRepository.save(user));
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return buildResponse(user);
     }
 
@@ -109,6 +101,68 @@ public class AuthServiceImpl implements AuthService {
                 .refreshToken(refreshToken.getToken())
                 .expiresIn(jwtExpiry)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserSummaryResponse getUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return UserSummaryResponse.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .roles(user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toSet()))
+                .build();
+    }
+
+    @Override
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BusinessException("Current password is incorrect");
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BusinessException("New password and confirmation do not match");
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BusinessException("New password must be different from the current password");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        refreshTokenRepository.findByUserAndRevokedFalse(user)
+                .forEach(token -> token.setRevoked(true));
+    }
+
+    private User buildUserFromRegisterRequest(RegisterRequest request) {
+        Set<RoleName> roleNames = requestedPublicRole(request);
+
+        User user = User.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .enabled(true)
+                .build();
+
+        user.setRoles(roleNames.stream()
+                .map(role -> roleRepository.findByName(role).orElseThrow(() -> new ResourceNotFoundException("Role not found")))
+                .collect(Collectors.toSet()));
+
+        return user;
+    }
+
+    private Set<RoleName> requestedPublicRole(RegisterRequest request) {
+        if (request.getRoles() == null || request.getRoles().isEmpty()) {
+            return Set.of(RoleName.ROLE_LEARNER);
+        }
+
+        boolean wantsMentor = request.getRoles().stream()
+                .anyMatch(role -> RoleName.ROLE_MENTOR.name().equals(role));
+
+        return Set.of(wantsMentor ? RoleName.ROLE_MENTOR : RoleName.ROLE_LEARNER);
     }
 
     private AuthResponse buildResponse(User user) {

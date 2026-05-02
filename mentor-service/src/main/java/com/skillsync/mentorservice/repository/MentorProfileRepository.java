@@ -9,6 +9,7 @@ import java.util.Optional;
 
 public interface MentorProfileRepository extends JpaRepository<MentorProfile, Long>, JpaSpecificationExecutor<MentorProfile> {
     Optional<MentorProfile> findByUserId(Long userId);
-    boolean existsByUserId(Long userId);
+    Optional<MentorProfile> findByEmailIgnoreCase(String email);
+    Optional<MentorProfile> findByUserIdAndEmailIgnoreCase(Long userId, String email);
     long countByStatus(MentorStatus status);
 }

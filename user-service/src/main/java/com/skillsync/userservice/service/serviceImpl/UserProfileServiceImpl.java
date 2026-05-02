@@ -64,6 +64,14 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     @Override
     @Transactional(readOnly = true)
+    public UserProfileResponse getByAuthUserId(Long authUserId) {
+        UserProfile profile = userProfileRepository.findByAuthUserId(authUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found for this user"));
+        return modelMapper.map(profile, UserProfileResponse.class);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PageResponse<UserProfileResponse> getAll(int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Page<UserProfile> result = userProfileRepository.findAll(PageRequest.of(page, size, sort));
@@ -75,5 +83,13 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .totalPages(result.getTotalPages())
                 .last(result.isLast())
                 .build();
+    }
+
+    @Override
+    public void delete(Long id) {
+        UserProfile profile = userProfileRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+        profile.getSkills().clear();
+        userProfileRepository.delete(profile);
     }
 }

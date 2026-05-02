@@ -21,7 +21,7 @@ public class GroupController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_LEARNER','ROLE_MENTOR')")
+    @PreAuthorize("hasAuthority('ROLE_MENTOR')")
     public ResponseEntity<GroupResponse> create(@Valid @RequestBody GroupCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(groupService.create(request));
     }

@@ -18,6 +18,16 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
 
+    @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<PageResponse<NotificationResponse>> getAllNotifications(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size,
+            @RequestParam(name = "sortBy", defaultValue = "createdAt") String sortBy,
+            @RequestParam(name = "sortDir", defaultValue = "desc") String sortDir) {
+        return ResponseEntity.ok(notificationService.getAll(page, size, sortBy, sortDir));
+    }
+
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasAnyAuthority('ROLE_LEARNER','ROLE_MENTOR','ROLE_ADMIN')")
     public ResponseEntity<PageResponse<NotificationResponse>> getUserNotifications(
@@ -33,6 +43,12 @@ public class NotificationController {
     @PreAuthorize("hasAnyAuthority('ROLE_LEARNER','ROLE_MENTOR','ROLE_ADMIN')")
     public ResponseEntity<NotificationCountResponse> getUnreadCount(@PathVariable("userId") Long userId) {
         return ResponseEntity.ok(notificationService.getUnreadCount(userId));
+    }
+
+    @GetMapping("/unread-count")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<NotificationCountResponse> getAdminUnreadCount() {
+        return ResponseEntity.ok(notificationService.getUnreadCountForAdmin());
     }
 
     @PutMapping("/{id}/read")

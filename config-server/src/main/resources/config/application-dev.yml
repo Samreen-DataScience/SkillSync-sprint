@@ -13,4 +13,4 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,mappings,env
+        include: health,info,mappings,env,prometheus

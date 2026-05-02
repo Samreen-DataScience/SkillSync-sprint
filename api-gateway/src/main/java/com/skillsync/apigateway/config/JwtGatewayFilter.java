@@ -31,7 +31,7 @@ public class JwtGatewayFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
-        if (path.startsWith("/auth/") || path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui") || path.startsWith("/eureka") || path.startsWith("/actuator")) {
+        if (isPublicPath(path)) {
             return chain.filter(exchange);
         }
 
@@ -79,5 +79,16 @@ public class JwtGatewayFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         return -1;
+    }
+
+    private boolean isPublicPath(String path) {
+        return path.startsWith("/auth/")
+                || path.startsWith("/v3/api-docs")
+                || path.endsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/webjars/swagger-ui")
+                || path.startsWith("/swagger-ui.html")
+                || path.startsWith("/eureka")
+                || path.startsWith("/actuator");
     }
 }

@@ -1,14 +1,18 @@
 package com.skillsync.reviewservice.service.serviceImpl;
 
+import com.skillsync.reviewservice.config.RabbitConfig;
 import com.skillsync.reviewservice.dto.*;
 import com.skillsync.reviewservice.entity.Review;
 import com.skillsync.reviewservice.exception.BusinessException;
 import com.skillsync.reviewservice.feign.MentorClient;
+import com.skillsync.reviewservice.messaging.NotificationEvent;
 import com.skillsync.reviewservice.repository.ReviewRepository;
 import com.skillsync.reviewservice.service.ReviewService;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 @Transactional
@@ -28,17 +33,23 @@ public class ReviewServiceImpl implements ReviewService {
     private final ModelMapper modelMapper;
     private final MentorClient mentorClient;
     private final CircuitBreakerFactory<?, ?> circuitBreakerFactory;
+    private final RabbitTemplate rabbitTemplate;
+
+    @Value("${skillsync.admin.user-id:1}")
+    private Long adminUserId = 1L;
 
     public ReviewServiceImpl(
             ReviewRepository reviewRepository,
             ModelMapper modelMapper,
             MentorClient mentorClient,
-            CircuitBreakerFactory<?, ?> circuitBreakerFactory
+            CircuitBreakerFactory<?, ?> circuitBreakerFactory,
+            RabbitTemplate rabbitTemplate
     ) {
         this.reviewRepository = reviewRepository;
         this.modelMapper = modelMapper;
         this.mentorClient = mentorClient;
         this.circuitBreakerFactory = circuitBreakerFactory;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     @Override
@@ -71,6 +82,8 @@ public class ReviewServiceImpl implements ReviewService {
                 }
         );
 
+        publishReviewNotifications(saved);
+
         return modelMapper.map(saved, ReviewResponse.class);
     }
 
@@ -93,5 +106,41 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public RatingSummaryResponse getAverageRating(Long mentorId) {
         return new RatingSummaryResponse(mentorId, reviewRepository.averageRatingByMentorId(mentorId));
+    }
+
+    private void publishReviewNotifications(Review review) {
+        Long mentorUserId = getMentorUserId(review.getMentorId());
+        publishToUser(mentorUserId, review, "REVIEW_SUBMITTED", "review.submitted",
+                "A learner submitted a " + review.getRating() + "-star review for your session.");
+        publishToUser(adminUserId, review, "REVIEW_SUBMITTED", "review.submitted",
+                "A learner submitted a " + review.getRating() + "-star review for mentor profile " + review.getMentorId() + ".");
+    }
+
+    private Long getMentorUserId(Long mentorId) {
+        try {
+            MentorResponse mentor = mentorClient.getById(mentorId);
+            return mentor == null ? null : mentor.getUserId();
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private void publishToUser(Long userId, Review review, String eventType, String routingKey, String message) {
+        if (userId == null) {
+            return;
+        }
+        try {
+            rabbitTemplate.convertAndSend(RabbitConfig.EXCHANGE, routingKey,
+                    NotificationEvent.builder()
+                            .eventType(eventType)
+                            .userId(userId)
+                            .message(message)
+                            .eventTime(LocalDateTime.now())
+                            .sessionId(review.getSessionId())
+                            .mentorId(review.getMentorId())
+                            .learnerId(review.getUserId())
+                            .build());
+        } catch (Exception ignored) {
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.skillsync.reviewservice.feign;
 
 import com.skillsync.reviewservice.dto.MentorRatingUpdateRequest;
+import com.skillsync.reviewservice.dto.MentorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,12 @@ import org.springframework.stereotype.Component;
 public class MentorClientFallback implements MentorClient {
 
     private static final Logger log = LoggerFactory.getLogger(MentorClientFallback.class);
+
+    @Override
+    public MentorResponse getById(Long mentorId) {
+        log.warn("Mentor-service is unavailable. Cannot resolve mentor user for mentorId={}", mentorId);
+        return null;
+    }
 
     @Override
     public void updateAverageRating(Long mentorId, MentorRatingUpdateRequest request) {

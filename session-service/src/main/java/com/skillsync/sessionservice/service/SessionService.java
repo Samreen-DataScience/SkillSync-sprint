@@ -11,6 +11,9 @@ public interface SessionService {
     SessionResponse reject(Long id);
     SessionResponse cancel(Long id);
     SessionResponse complete(Long id);
+    SessionResponse updateMeetingLink(Long id, String meetingLink);
+    PageResponse<SessionResponse> getAll(int page, int size, String sortBy, String sortDir);
     PageResponse<SessionResponse> getByUserId(Long userId, int page, int size, String sortBy, String sortDir);
+    PageResponse<SessionResponse> getByMentorId(Long mentorId, int page, int size, String sortBy, String sortDir);
     SessionSummaryResponse getSummaryByUserId(Long userId);
 }

@@ -11,10 +11,13 @@ import java.math.BigDecimal;
 public interface MentorService {
     MentorResponse apply(MentorApplyRequest request);
     MentorResponse getById(Long id);
-    PageResponse<MentorResponse> getAll(String skillId, BigDecimal minRating, Integer minExperience, BigDecimal maxPrice, int page, int size, String sortBy, String sortDir);
+    MentorResponse getByUserId(Long userId, String email);
+    MentorResponse update(Long id, MentorApplyRequest request);
+    PageResponse<MentorResponse> getAll(String skillId, String status, BigDecimal minRating, Integer minExperience, BigDecimal maxPrice, int page, int size, String sortBy, String sortDir);
     MentorResponse updateAvailability(Long id, MentorAvailabilityRequest request);
     MentorResponse approve(Long id);
     MentorResponse reject(Long id, String reason);
+    void delete(Long id);
     MentorResponse updateAverageRating(Long id, BigDecimal averageRating);
     MentorSummaryResponse getSummary();
 }

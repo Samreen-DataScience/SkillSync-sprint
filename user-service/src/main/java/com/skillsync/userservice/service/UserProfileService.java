@@ -8,5 +8,7 @@ public interface UserProfileService {
     UserProfileResponse create(UserProfileRequest request);
     UserProfileResponse update(Long id, UserProfileRequest request);
     UserProfileResponse getById(Long id);
+    UserProfileResponse getByAuthUserId(Long authUserId);
     PageResponse<UserProfileResponse> getAll(int page, int size, String sortBy, String sortDir);
+    void delete(Long id);
 }

@@ -1,0 +1,84 @@
+name: Deploy SkillSync to Azure
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+  MICRO_SERVICES: discovery-server config-server api-gateway auth-service user-service mentor-service skill-service session-service group-service review-service notification-service
+
+jobs:
+  build-and-push:
+    name: Build and push images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name "${{ vars.ACR_NAME }}"
+
+      - name: Build and push backend service images
+        shell: bash
+        run: |
+          set -euo pipefail
+          for service in $MICRO_SERVICES; do
+            image="${{ vars.ACR_LOGIN_SERVER }}/skillsync-${service}"
+            docker build \
+              -f Dockerfile.microservice \
+              --build-arg SERVICE_DIR="${service}" \
+              -t "${image}:${IMAGE_TAG}" \
+              -t "${image}:latest" \
+              .
+            docker push "${image}:${IMAGE_TAG}"
+            docker push "${image}:latest"
+          done
+
+      - name: Build and push frontend image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${{ vars.ACR_LOGIN_SERVER }}/skillsync-frontend"
+          docker build \
+            --build-arg VITE_API_URL="${{ vars.PUBLIC_API_URL }}" \
+            --build-arg VITE_AUTH_SERVICE_URL="${{ vars.PUBLIC_API_URL }}" \
+            -t "${image}:${IMAGE_TAG}" \
+            -t "${image}:latest" \
+            ./frontend
+          docker push "${image}:${IMAGE_TAG}"
+          docker push "${image}:latest"
+
+  deploy:
+    name: Update Azure Container Apps
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Update existing Container Apps
+        shell: bash
+        run: |
+          set -euo pipefail
+          for service in $MICRO_SERVICES; do
+            az containerapp update \
+              --name "skillsync-${service}" \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --image "${{ vars.ACR_LOGIN_SERVER }}/skillsync-${service}:${IMAGE_TAG}"
+          done
+
+          az containerapp update \
+            --name "skillsync-frontend" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --image "${{ vars.ACR_LOGIN_SERVER }}/skillsync-frontend:${IMAGE_TAG}"

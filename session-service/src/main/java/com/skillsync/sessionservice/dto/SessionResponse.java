@@ -13,6 +13,7 @@ public class SessionResponse {
     private Integer durationMinutes;
     private String topic;
     private String status;
+    private String meetingLink;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

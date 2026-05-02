@@ -11,6 +11,13 @@ public class MentorApplyRequest {
     @NotNull
     private Long userId;
 
+    @Size(max = 100)
+    private String displayName;
+
+    @Email
+    @Size(max = 150)
+    private String email;
+
     @NotBlank
     @Size(max = 2000)
     private String bio;
