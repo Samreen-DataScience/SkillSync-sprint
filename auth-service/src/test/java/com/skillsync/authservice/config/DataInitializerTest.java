@@ -52,7 +52,7 @@ class DataInitializerTest {
     void initAdminUserCreatesDefaultAdminWhenMissing() {
         Role adminRole = Role.builder().name(RoleName.ROLE_ADMIN).build();
         when(userRepository.findByEmail("admin@gmail.com")).thenReturn(Optional.empty());
-        when(userRepository.existsByEmail("admin@skillsync.com")).thenReturn(false);
+        when(userRepository.findByEmail("admin@skillsync.com")).thenReturn(Optional.empty());
         when(roleRepository.findByName(RoleName.ROLE_ADMIN)).thenReturn(Optional.of(adminRole));
         when(passwordEncoder.encode("Admin@123")).thenReturn("encoded-password");
 
@@ -63,24 +63,35 @@ class DataInitializerTest {
     }
 
     @Test
-    void initAdminUserSkipsExistingAdmin() {
+    void initAdminUserUpdatesExistingAdmin() {
+        Role adminRole = Role.builder().name(RoleName.ROLE_ADMIN).build();
+        User existingAdmin = User.builder()
+                .name("Old Admin")
+                .email("admin@skillsync.com")
+                .password("old-password")
+                .enabled(false)
+                .build();
         when(userRepository.findByEmail("admin@gmail.com")).thenReturn(Optional.empty());
-        when(userRepository.existsByEmail("admin@skillsync.com")).thenReturn(true);
+        when(userRepository.findByEmail("admin@skillsync.com")).thenReturn(Optional.of(existingAdmin));
+        when(roleRepository.findByName(RoleName.ROLE_ADMIN)).thenReturn(Optional.of(adminRole));
+        when(passwordEncoder.encode("Admin@123")).thenReturn("encoded-password");
 
         DataInitializer initializer = new DataInitializer(roleRepository, userRepository, passwordEncoder, jdbcTemplate);
         initializer.initAdminUser();
 
-        verify(userRepository, never()).save(any(User.class));
+        verify(userRepository).save(existingAdmin);
     }
 
     @Test
     void initAdminUserMigratesLegacyLocalAdmin() {
+        Role adminRole = Role.builder().name(RoleName.ROLE_ADMIN).build();
         User legacyAdmin = User.builder()
                 .name("Admin")
                 .email("admin@gmail.com")
                 .password("old-password")
                 .enabled(true)
                 .build();
+        when(roleRepository.findByName(RoleName.ROLE_ADMIN)).thenReturn(Optional.of(adminRole));
         when(userRepository.findByEmail("admin@gmail.com")).thenReturn(Optional.of(legacyAdmin));
         when(userRepository.existsByEmail("admin@skillsync.com")).thenReturn(false);
         when(passwordEncoder.encode("Admin@123")).thenReturn("encoded-password");
